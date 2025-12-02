@@ -1,10 +1,12 @@
 #include <linux/bitops.h>
+#include <linux/cpumask.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/preempt.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/slab.h>
 #include <linux/smp.h>
 #include <asm/barrier.h>
 
@@ -12,19 +14,25 @@
 
 /* Event encodings for Cortex-A72 (ARMv8) PMU */
 #define EVT_INSTR_RETIRED   0x08
-#define EVT_L1D_ACCESS      0x04
+#define EVT_L1I_REFILL      0x01
+#define EVT_L1I_ACCESS      0x14
 #define EVT_L1D_REFILL      0x03
+#define EVT_L1D_ACCESS      0x04
 #define EVT_LLC_REFILL      0x17
 
 #define COUNTER_INSTRUCTIONS 0
-#define COUNTER_L1_REF       1
-#define COUNTER_L1_MISS      2
-#define COUNTER_LLC_MISS     3
+#define COUNTER_L1I_REF      1
+#define COUNTER_L1I_MISS     2
+#define COUNTER_L1D_REF      3
+#define COUNTER_L1D_MISS     4
+#define COUNTER_LLC_MISS     5
 
-#define COUNTER_MASK ((1U << COUNTER_INSTRUCTIONS) | \
-                      (1U << COUNTER_L1_REF) | \
-                      (1U << COUNTER_L1_MISS) | \
-                      (1U << COUNTER_LLC_MISS))
+#define COUNTER_MASK (BIT(COUNTER_INSTRUCTIONS) | \
+                      BIT(COUNTER_L1I_REF) | \
+                      BIT(COUNTER_L1I_MISS) | \
+                      BIT(COUNTER_L1D_REF) | \
+                      BIT(COUNTER_L1D_MISS) | \
+                      BIT(COUNTER_LLC_MISS))
 
 #define PMU_ENABLE_BIT    BIT(0)
 #define PMU_RESET_EVENTS  BIT(1)
@@ -33,8 +41,10 @@
 
 struct pmu_counts {
     u64 instructions;
-    u64 l1_ref;
-    u64 l1_miss;
+    u64 l1i_ref;
+    u64 l1i_miss;
+    u64 l1d_ref;
+    u64 l1d_miss;
     u64 llc_miss;
     u64 cycles;
 };
@@ -123,8 +133,10 @@ static void pmu_reset_cpu(void *unused)
     write_pmcr_el0(PMU_ENABLE_BIT | PMU_RESET_EVENTS | PMU_RESET_CYCLES);
 
     pmu_program_counter(COUNTER_INSTRUCTIONS, EVT_INSTR_RETIRED);
-    pmu_program_counter(COUNTER_L1_REF, EVT_L1D_ACCESS);
-    pmu_program_counter(COUNTER_L1_MISS, EVT_L1D_REFILL);
+    pmu_program_counter(COUNTER_L1I_REF, EVT_L1I_ACCESS);
+    pmu_program_counter(COUNTER_L1I_MISS, EVT_L1I_REFILL);
+    pmu_program_counter(COUNTER_L1D_REF, EVT_L1D_ACCESS);
+    pmu_program_counter(COUNTER_L1D_MISS, EVT_L1D_REFILL);
     pmu_program_counter(COUNTER_LLC_MISS, EVT_LLC_REFILL);
 
     write_pmcntenset_el0(COUNTER_MASK | PMU_CYCLE_COUNTER);
@@ -135,28 +147,58 @@ static void pmu_disable_cpu(void *unused)
     write_pmcntenclr_el0(COUNTER_MASK | PMU_CYCLE_COUNTER);
 }
 
-static void pmu_snapshot(struct pmu_counts *snapshot)
+static void pmu_read_local(struct pmu_counts *snapshot)
 {
     preempt_disable();
     snapshot->instructions = read_event_counter(COUNTER_INSTRUCTIONS);
-    snapshot->l1_ref = read_event_counter(COUNTER_L1_REF);
-    snapshot->l1_miss = read_event_counter(COUNTER_L1_MISS);
+    snapshot->l1i_ref = read_event_counter(COUNTER_L1I_REF);
+    snapshot->l1i_miss = read_event_counter(COUNTER_L1I_MISS);
+    snapshot->l1d_ref = read_event_counter(COUNTER_L1D_REF);
+    snapshot->l1d_miss = read_event_counter(COUNTER_L1D_MISS);
     snapshot->llc_miss = read_event_counter(COUNTER_LLC_MISS);
     snapshot->cycles = read_pmccntr_el0();
     preempt_enable();
 }
 
+static void pmu_collect_cpu(void *info)
+{
+    struct pmu_counts *per_cpu_counts = info;
+    unsigned int cpu = smp_processor_id();
+
+    pmu_read_local(&per_cpu_counts[cpu]);
+}
+
 static int pmu_proc_show(struct seq_file *m, void *v)
 {
-    struct pmu_counts counts;
+    struct pmu_counts total = {};
+    struct pmu_counts *per_cpu_counts;
+    unsigned int cpu;
 
-    pmu_snapshot(&counts);
+    per_cpu_counts = kcalloc(nr_cpu_ids, sizeof(*per_cpu_counts), GFP_KERNEL);
+    if (!per_cpu_counts)
+        return -ENOMEM;
 
-    seq_printf(m, "instructions: %llu\n", counts.instructions);
-    seq_printf(m, "l1_references: %llu\n", counts.l1_ref);
-    seq_printf(m, "l1_misses: %llu\n", counts.l1_miss);
-    seq_printf(m, "llc_misses: %llu\n", counts.llc_miss);
-    seq_printf(m, "cycles: %llu\n", counts.cycles);
+    on_each_cpu(pmu_collect_cpu, per_cpu_counts, 1);
+
+    for_each_online_cpu(cpu) {
+        total.instructions += per_cpu_counts[cpu].instructions;
+        total.l1i_ref += per_cpu_counts[cpu].l1i_ref;
+        total.l1i_miss += per_cpu_counts[cpu].l1i_miss;
+        total.l1d_ref += per_cpu_counts[cpu].l1d_ref;
+        total.l1d_miss += per_cpu_counts[cpu].l1d_miss;
+        total.llc_miss += per_cpu_counts[cpu].llc_miss;
+        total.cycles += per_cpu_counts[cpu].cycles;
+    }
+
+    kfree(per_cpu_counts);
+
+    seq_printf(m, "instructions: %llu\n", total.instructions);
+    seq_printf(m, "l1i_references: %llu\n", total.l1i_ref);
+    seq_printf(m, "l1i_misses: %llu\n", total.l1i_miss);
+    seq_printf(m, "l1d_references: %llu\n", total.l1d_ref);
+    seq_printf(m, "l1d_misses: %llu\n", total.l1d_miss);
+    seq_printf(m, "llc_misses: %llu\n", total.llc_miss);
+    seq_printf(m, "cycles: %llu\n", total.cycles);
 
     return 0;
 }
