@@ -1,0 +1,6 @@
+*.tmp
+data/
+stream.c
+stream
+ko/*.ko
+results.csv
