@@ -4,3 +4,4 @@ stream.c
 stream
 ko/*.ko
 results.csv
+plot/
