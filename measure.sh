@@ -8,17 +8,34 @@ if [ ! -r "$PMU_FILE" ]; then
     exit 1
 fi
 
+# 32-bit PMU event counter 최대값 (모듈로 연산용)
+MOD32=$((1 << 32))
+
+# 32비트 카운터 오버플로 보정
+# before <= after  : 그냥 after - before
+# before >  after  : 한 번 overflow 났다고 보고 (after + 2^32) - before
+calc_delta() {
+    local before=$1
+    local after=$2
+
+    if [ "$after" -ge "$before" ]; then
+        echo $((after - before))
+    else
+        echo $((after + MOD32 - before))
+    fi
+}
+
 # /proc/pmu_stats 한 번 읽어서 7개 값( instruction ~ cycles )을 공백으로 출력
 read_pmu() {
     local inst l1i_ref l1i_miss l1d_ref l1d_miss llc_miss cycles
 
-    inst=$(awk '/^instructions:/     {print $2}' "$PMU_FILE")
+    inst=$(awk '/^instructions:/      {print $2}' "$PMU_FILE")
     l1i_ref=$(awk '/^l1i_references:/ {print $2}' "$PMU_FILE")
     l1i_miss=$(awk '/^l1i_misses:/    {print $2}' "$PMU_FILE")
     l1d_ref=$(awk '/^l1d_references:/ {print $2}' "$PMU_FILE")
-    l1d_miss=$(awk '/^l1d_misses:/   {print $2}' "$PMU_FILE")
-    llc_miss=$(awk '/^llc_misses:/   {print $2}' "$PMU_FILE")
-    cycles=$(awk '/^cycles:/         {print $2}' "$PMU_FILE")
+    l1d_miss=$(awk '/^l1d_misses:/    {print $2}' "$PMU_FILE")
+    llc_miss=$(awk '/^llc_misses:/    {print $2}' "$PMU_FILE")
+    cycles=$(awk '/^cycles:/          {print $2}' "$PMU_FILE")
 
     echo "$inst $l1i_ref $l1i_miss $l1d_ref $l1d_miss $llc_miss $cycles"
 }
@@ -46,12 +63,13 @@ measure_workload() {
 
     local inst l1i_ref l1i_miss l1d_ref l1d_miss llc_miss cycles
 
-    inst=$((a_inst - b_inst))
-    l1i_ref=$((a_i_ref - b_i_ref))
-    l1i_miss=$((a_i_miss - b_i_miss))
-    l1d_ref=$((a_d_ref - b_d_ref))
-    l1d_miss=$((a_d_miss - b_d_miss))
-    llc_miss=$((a_llc - b_llc))
+    inst=$(   calc_delta "$b_inst"  "$a_inst"  )
+    l1i_ref=$(calc_delta "$b_i_ref" "$a_i_ref" )
+    l1i_miss=$(calc_delta "$b_i_miss" "$a_i_miss")
+    l1d_ref=$(calc_delta "$b_d_ref" "$a_d_ref" )
+    l1d_miss=$(calc_delta "$b_d_miss" "$a_d_miss")
+    llc_miss=$(calc_delta "$b_llc"  "$a_llc"  )
+    # cycles는 64-bit라 그냥 뺄셈 (실험 시간 내에는 overflow 거의 없음)
     cycles=$((a_cyc - b_cyc))
 
     echo "$name,$inst,$l1i_ref,$l1i_miss,$l1d_ref,$l1d_miss,$llc_miss,$cycles" >> "$OUT_CSV"
