@@ -93,6 +93,10 @@ measure_workload "stream_default" ./stream
 measure_workload "stream_4threads" bash -c "OMP_NUM_THREADS=4 ./stream"
 
 # 3) bzip2 - 서로 다른 크기의 파일
+rm -f data/*.bz2
+
 measure_workload "bzip2_small"  bzip2 -k data/small.dat
 measure_workload "bzip2_medium" bzip2 -k data/medium.dat
 measure_workload "bzip2_large"  bzip2 -k data/large.dat
+
+rm -f *.tmp
