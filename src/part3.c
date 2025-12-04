@@ -304,7 +304,7 @@ static int __init pmu_init(void)
         return -ENOMEM;
     }
 
-    pmu_proc_ctrl = proc_create(PROC_NAME_CONTROL, 0220, NULL, &pmu_ctrl_fops);
+    pmu_proc_ctrl = proc_create(PROC_NAME_CONTROL, 0666, NULL, &pmu_ctrl_fops);
     if (!pmu_proc_ctrl) {
         proc_remove(pmu_proc_stats);
         pmu_stop_all_cpus();

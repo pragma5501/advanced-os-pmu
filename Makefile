@@ -2,20 +2,19 @@ KDIR := /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
 SRC := $(PWD)/src
 SRC_KO := $(PWD)/ko
-KO  := part1.ko
+MODULES := part1.ko part3.ko
 
-.PHONY: all clean $(KO)
+.PHONY: all modules clean
 
-all: $(KO)
+all: modules
 
-
-$(KO):
+modules:
 	mkdir -p $(SRC_KO)
 	$(MAKE) -C $(KDIR) M=$(SRC) modules
-	cp $(SRC)/$(KO) $(SRC_KO)/$(KO)
+	cp $(addprefix $(SRC)/,$(MODULES)) $(SRC_KO)/
 	$(MAKE) -C $(KDIR) M=$(SRC) clean
 
 clean:
-	rm -f $(KO)
-	rm -rf ${SRC_KO}
+	rm -f $(MODULES)
+	rm -rf $(SRC_KO)
 	$(MAKE) -C $(KDIR) M=$(SRC) clean

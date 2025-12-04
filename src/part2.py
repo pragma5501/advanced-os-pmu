@@ -6,32 +6,24 @@ import os
 SAVE_FOLDER = Path("/home/os/pmu/advanced-os-pmu/plot")
 os.makedirs(SAVE_FOLDER, exist_ok=True)
 
-# =========================
-# 1. CSV 읽기
-# =========================
+
 csv_path = Path("/home/os/pmu/advanced-os-pmu/results.csv")
 if not csv_path.exists():
     raise FileNotFoundError("results.csv 파일이 현재 디렉토리에 없습니다.")
 
 df = pd.read_csv(csv_path)
 
-# workload를 x축에 쓰기 편하게 index로
 df.set_index("workload", inplace=True)
 
-# =========================
-# 2. miss rate 계산 (보고서 분석용)
-# =========================
-# 0으로 나누는 것 방지용
+
 df["l1i_miss_rate"] = df["l1i_miss"] / df["l1i_ref"].replace(0, pd.NA)
 df["l1d_miss_rate"] = df["l1d_miss"] / df["l1d_ref"].replace(0, pd.NA)
 df["llc_miss_rate"] = df["llc_miss"] / df["l1d_ref"].replace(0, pd.NA)
 
-# NaN을 0으로 바꾸기 (그래프 그릴 때 보기 좋게)
+
 df.fillna(0, inplace=True)
 
-# =========================
-# 3. instructions vs cycles 그래프
-# =========================
+
 plt.figure(figsize=(10, 6))
 
 # 막대 두 개를 나란히 그리기 위해 위치 조정
