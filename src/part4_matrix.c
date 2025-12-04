@@ -1,6 +1,6 @@
-// matrix_phases.c
-// Phase 1: initialize matrices
-// Phase 2: matrix multiplication C = A * B
+
+
+
 
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -12,7 +12,7 @@
 #define PMU_CTRL_PATH  "/proc/pmu_control"
 #define PMU_STATS_PATH "/proc/pmu_stats"
 
-#define N 512  // matrix dimension (N x N)
+#define N 512  
 
 struct pmu_stats {
     unsigned long long instructions;
@@ -117,7 +117,7 @@ int main(void)
            (double)bytes / (1024.0 * 1024.0),
            3.0 * (double)bytes / (1024.0 * 1024.0));
 
-    /* ---------- Phase 1: initialize matrices ---------- */
+    
     printf("[Phase 1] Initializing matrices A and B...\n");
 
     if (pmu_control("start\n") < 0) goto out;
@@ -125,7 +125,7 @@ int main(void)
     for (i = 0; i < N; i++) {
         for (j = 0; j < N; j++) {
             A[i * N + j] = (double)(i + j);
-            B[i * N + j] = (double)(i == j ? 1.0 : 0.0);  // identity-like
+            B[i * N + j] = (double)(i == j ? 1.0 : 0.0);  
             C[i * N + j] = 0.0;
         }
     }
@@ -135,7 +135,7 @@ int main(void)
 
     print_stats("Phase 1 (matrix initialization)", &init_stats);
 
-    /* ---------- Phase 2: matrix multiplication ---------- */
+    
     printf("[Phase 2] Performing matrix multiplication C = A * B...\n");
 
     if (pmu_control("start\n") < 0) goto out;
@@ -155,7 +155,7 @@ int main(void)
 
     print_stats("Phase 2 (matrix multiplication)", &mm_stats);
 
-    // 간단한 checksum (최적화 방지용)
+    
     for (i = 0; i < N; i++)
         checksum += (long long)C[i * N + (i % N)];
     printf("Checksum: %lld\n", checksum);

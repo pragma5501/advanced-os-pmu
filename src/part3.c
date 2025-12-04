@@ -15,7 +15,7 @@
 #define PROC_NAME_STATS   "pmu_stats"
 #define PROC_NAME_CONTROL "pmu_control"
 
-/* Event encodings for Cortex-A72 (ARMv8) PMU */
+
 #define EVT_INSTR_RETIRED   0x08
 #define EVT_L1I_REFILL      0x01
 #define EVT_L1I_ACCESS      0x14
@@ -55,7 +55,7 @@ struct pmu_counts {
 static struct proc_dir_entry *pmu_proc_stats;
 static struct proc_dir_entry *pmu_proc_ctrl;
 
-/* pause / resume 상태 관리 */
+
 enum pmu_state {
     PMU_STOPPED = 0,
     PMU_RUNNING = 1,
@@ -64,7 +64,7 @@ enum pmu_state {
 static enum pmu_state pmu_state = PMU_STOPPED;
 static DEFINE_MUTEX(pmu_ctrl_lock);
 
-/* Raw register helpers */
+
 static inline void write_pmselr_el0(u64 val)
 {
     asm volatile("msr pmselr_el0, %0" :: "r"(val));
@@ -136,17 +136,17 @@ static void pmu_program_counter(u32 counter, u32 event)
     write_pmxevcntr_el0(0);
 }
 
-/*
- * per-CPU 초기화 + reset + enable
- * → Part 1에서 쓰던 pmu_reset_cpu 그대로 사용
- */
+
+
+
+
 static void pmu_reset_cpu(void *unused)
 {
-    /* Disable and clear any stale state before programming. */
+    
     write_pmcntenclr_el0(COUNTER_MASK | PMU_CYCLE_COUNTER);
     write_pmovsclr_el0(~0U);
 
-    /* Enable PMU + reset both event and cycle counters. */
+    
     write_pmcr_el0(PMU_ENABLE_BIT | PMU_RESET_EVENTS | PMU_RESET_CYCLES);
 
     pmu_program_counter(COUNTER_INSTRUCTIONS, EVT_INSTR_RETIRED);
@@ -164,7 +164,7 @@ static void pmu_disable_cpu(void *unused)
     write_pmcntenclr_el0(COUNTER_MASK | PMU_CYCLE_COUNTER);
 }
 
-/* Part 3용 helper: 전체 CPU start/stop 래퍼 */
+
 static void pmu_start_all_cpus(void)
 {
     on_each_cpu(pmu_reset_cpu, NULL, 1);
@@ -198,7 +198,7 @@ static void pmu_collect_cpu(void *info)
     pmu_read_local(&per_cpu_counts[cpu]);
 }
 
-/* ---------- /proc/pmu_stats ---------- */
+
 
 static int pmu_proc_show(struct seq_file *m, void *v)
 {
@@ -249,7 +249,7 @@ static const struct proc_ops pmu_proc_fops = {
     .proc_release = single_release,
 };
 
-/* ---------- /proc/pmu_control (Part 3) ---------- */
+
 
 static ssize_t pmu_ctrl_write(struct file *file,
                               const char __user *buf,
@@ -289,13 +289,13 @@ static const struct proc_ops pmu_ctrl_fops = {
     .proc_write = pmu_ctrl_write,
 };
 
-/* ---------- module init / exit ---------- */
+
 
 static int __init pmu_init(void)
 {
     pr_info("pmu: programming counters for Raspberry Pi 4\n");
 
-    /* 모듈 로드 시 한 번 reset + 시작 (Part 1과 동일한 초기 동작) */
+    
     pmu_start_all_cpus();
 
     pmu_proc_stats = proc_create(PROC_NAME_STATS, 0444, NULL, &pmu_proc_fops);

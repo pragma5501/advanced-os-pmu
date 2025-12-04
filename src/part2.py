@@ -26,7 +26,7 @@ df.fillna(0, inplace=True)
 
 plt.figure(figsize=(10, 6))
 
-# 막대 두 개를 나란히 그리기 위해 위치 조정
+                          
 x = range(len(df.index))
 width = 0.35
 
@@ -41,13 +41,13 @@ plt.tight_layout()
 save_path = os.path.join(SAVE_FOLDER, "pmu_instructions_cycles.png")
 plt.savefig(save_path, dpi=300)
 
-# =========================
-# 4. 캐시 미스 개수 비교 그래프
-# =========================
+                           
+                    
+                           
 plt.figure(figsize=(10, 6))
 
 plt.bar(x, df["l1i_miss"], label="L1I Misses")
-plt.bar(x, df["l1d_miss"], bottom=df["l1i_miss"], label="L1D Misses")  # stacked
+plt.bar(x, df["l1d_miss"], bottom=df["l1i_miss"], label="L1D Misses")           
 plt.bar(x, df["llc_miss"], bottom=df["l1i_miss"] + df["l1d_miss"], label="LLC Misses")
 
 plt.xticks(ticks=x, labels=df.index, rotation=30, ha="right")
@@ -58,9 +58,9 @@ plt.tight_layout()
 save_path = os.path.join(SAVE_FOLDER, "pmu_cache_misses_stacked.png")
 plt.savefig(save_path, dpi=300)
 
-# =========================
-# 5. miss rate 그래프 (L1I / L1D / LLC)
-# =========================
+                           
+                                    
+                           
 plt.figure(figsize=(10, 6))
 
 plt.plot(df.index, df["l1i_miss_rate"], marker="o", label="L1I Miss Rate")

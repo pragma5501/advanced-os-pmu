@@ -12,7 +12,7 @@
 
 #define PROC_NAME "pmu_stats"
 
-/* Event encodings for Cortex-A72 (ARMv8) PMU */
+
 #define EVT_INSTR_RETIRED   0x08
 #define EVT_L1I_REFILL      0x01
 #define EVT_L1I_ACCESS      0x14
@@ -51,7 +51,7 @@ struct pmu_counts {
 
 static struct proc_dir_entry *pmu_proc;
 
-/* Raw register helpers */
+
 static inline void write_pmselr_el0(u64 val)
 {
     asm volatile("msr pmselr_el0, %0" :: "r"(val));
@@ -125,11 +125,11 @@ static void pmu_program_counter(u32 counter, u32 event)
 
 static void pmu_reset_cpu(void *unused)
 {
-    /* Disable and clear any stale state before programming. */
+    
     write_pmcntenclr_el0(COUNTER_MASK | PMU_CYCLE_COUNTER);
     write_pmovsclr_el0(~0U);
 
-    /* Enable PMU + reset both event and cycle counters. */
+    
     write_pmcr_el0(PMU_ENABLE_BIT | PMU_RESET_EVENTS | PMU_RESET_CYCLES);
 
     pmu_program_counter(COUNTER_INSTRUCTIONS, EVT_INSTR_RETIRED);

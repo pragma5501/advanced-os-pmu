@@ -1,6 +1,6 @@
-// random_access_phases.c
-// Phase 1: sequential access
-// Phase 2: random access
+
+
+
 
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -13,7 +13,7 @@
 #define PMU_CTRL_PATH  "/proc/pmu_control"
 #define PMU_STATS_PATH "/proc/pmu_stats"
 
-#define ARRAY_SIZE (16 * 1024 * 1024)  // 16M ints ≈ 64MB
+#define ARRAY_SIZE (16 * 1024 * 1024)  
 #define RANDOM_ITERS (4 * ARRAY_SIZE)
 
 struct pmu_stats {
@@ -117,7 +117,7 @@ int main(void)
            (size_t)ARRAY_SIZE,
            (double)ARRAY_SIZE * sizeof(int) / (1024.0 * 1024.0));
 
-    /* ---------- Phase 1: sequential access ---------- */
+    
     printf("[Phase 1] Sequential scan...\n");
 
     if (pmu_control("start\n") < 0) goto out;
@@ -128,7 +128,7 @@ int main(void)
     if (pmu_read_stats(&seq_stats) < 0) goto out;
     print_stats("Phase 1 (sequential access)", &seq_stats);
 
-    /* ---------- Phase 2: random access ---------- */
+    
     printf("[Phase 2] Random access...\n");
     srand((unsigned)time(NULL));
 
