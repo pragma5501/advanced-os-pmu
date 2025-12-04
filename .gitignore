@@ -3,5 +3,6 @@ data/
 stream.c
 stream
 ko/*.ko
-results.csv
+*.csv
 plot/
+bin/
