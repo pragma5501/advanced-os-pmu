@@ -13,7 +13,7 @@
 #define PMU_CTRL_PATH  "/proc/pmu_control"
 #define PMU_STATS_PATH "/proc/pmu_stats"
 
-#define ARRAY_SIZE (16 * 1024 * 1024)  
+#define ARRAY_SIZE (16 * 4 * 1024 * 1024)  
 #define RANDOM_ITERS (4 * ARRAY_SIZE)
 
 struct pmu_stats {

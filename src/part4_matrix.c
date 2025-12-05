@@ -12,7 +12,7 @@
 #define PMU_CTRL_PATH  "/proc/pmu_control"
 #define PMU_STATS_PATH "/proc/pmu_stats"
 
-#define N 512  
+#define N 512
 
 struct pmu_stats {
     unsigned long long instructions;

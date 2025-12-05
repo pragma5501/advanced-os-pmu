@@ -13,7 +13,7 @@ dd if=/dev/zero of=data/medium.dat bs=1M count=100    # 100MB
 dd if=/dev/zero of=data/large.dat  bs=1M count=500    # 500MB
 
 make
-# sudo rmmod ./ko/part1.ko
+sudo rmmod ./ko/part1.ko
 # sudo insmod ./ko/part1.ko
 sudo rmmod ./ko/part3.ko
 sudo insmod ./ko/part3.ko
